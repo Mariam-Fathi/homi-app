@@ -12,64 +12,11 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { checkAndNotifyNewProperties } from "@/lib/appwrite";
+import { useState } from "react";
 
 const Auth = () => {
- const { fetchCurrentUser, isAuthenticated, loading, user } = useAuthStore();
+  const { fetchCurrentUser, isAuthenticated, loading } = useAuthStore();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const hasCheckedProperties = useRef(false);
-  const checkTimeoutRef = useRef<NodeJS.Timeout>();
-
-  const checkNewProperties = useCallback(async () => {
-    if (hasCheckedProperties.current || !isAuthenticated || !user?.$id) {
-      return;
-    }
-
-    hasCheckedProperties.current = true;
-    
-    try {
-      console.log("🔍 Checking for new properties after login...");
-      const result = await checkAndNotifyNewProperties({ userId: user.$id });
-      
-      if (result.isNewUser) {
-        console.log("👋 Welcome new user!");
-      } else if (result.noNewProperties) {
-        console.log("📭 No new properties found");
-      } else if (result.success) {
-        console.log("✅ New properties check completed");
-      }
-    } catch (error) {
-      console.error("Error in new properties check:", error);
-    }
-  }, [isAuthenticated, user]);
-
-useEffect(() => {
-    if (isAuthenticated && user?.$id) {
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-      
-      checkTimeoutRef.current = setTimeout(() => {
-        checkNewProperties();
-      }, 1000);
-    }
-
-    return () => {
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-    };
-  }, [isAuthenticated, user, checkNewProperties]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      hasCheckedProperties.current = false;
-      if (checkTimeoutRef.current) {
-        clearTimeout(checkTimeoutRef.current);
-      }
-    }
-  }, [isAuthenticated]);
 
   const handleLogin = async () => {
     try {
@@ -87,6 +34,23 @@ useEffect(() => {
     } catch (error) {
       console.error("Login error:", error);
       Alert.alert("Error", "An unexpected error occurred during login.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      useAuthStore.getState().setDemoUser();
+
+      console.log("Demo login successful - redirecting to home");
+    } catch (error) {
+      console.error("Demo login error:", error);
+      Alert.alert("Error", "Demo login failed. Please try again.");
     } finally {
       setIsLoggingIn(false);
     }
@@ -112,7 +76,7 @@ useEffect(() => {
         className="w-full h-4/6"
         resizeMode="contain"
       />
-      <View className="px-8 pb-16 absolute bottom-0 w-full">
+      <View className="px-8 pb-6 absolute bottom-0 w-full">
         <Text className="text-base text-center uppercase font-rubik text-black-200 tracking-wider">
           Welcome To Homi
         </Text>
@@ -139,6 +103,18 @@ useEffect(() => {
             />
             <Text className="text-lg font-rubik-medium text-black-300 ml-3">
               {isLoggingIn ? "Signing In..." : "Continue with Google"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleDemoLogin}
+          disabled={isLoggingIn}
+          className="bg-white border border-gray-200 rounded-full w-full py-4 mt-4 shadow-sm shadow-zinc-300 active:shadow-none active:scale-95"
+        >
+          <View className="flex flex-row items-center justify-center">
+            <Text className="text-lg font-rubik-medium text-black-300">
+              {isLoggingIn ? "Entering Demo..." : "Try Demo Mode"}
             </Text>
           </View>
         </TouchableOpacity>

@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useEffect, useCallback, useRef } from "react";
-import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useEffect, useRef } from "react";
+import { router, useLocalSearchParams } from "expo-router";
 
 import icons from "@/constants/icons";
 import Search from "@/components/Search";
@@ -16,7 +16,7 @@ import { Card } from "@/components/Cards";
 import Filters from "@/components/Filters";
 import NoResults from "@/components/NoResult";
 
-import { getNotifications, getProperties } from "@/lib/appwrite";
+import { getProperties } from "@/lib/appwrite";
 import { useAppwrite } from "@/lib/useAppwrite";
 import { useAuthStore } from "@/store/authStore";
 
@@ -38,18 +38,6 @@ const Explore = () => {
     skip: true,
   });
 
-  const {
-    data: notifications,
-    refetch: refreshNotifications,
-    loading: notificationsLoading,
-  } = useAppwrite({
-    fn: getNotifications,
-    params: { userId: user?.$id || "" },
-    skip: !user?.$id,
-  });
-
-  const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0;
-
   // Use ref to track if component is mounted to prevent infinite loops
   useEffect(() => {
     isMountedRef.current = true;
@@ -68,32 +56,7 @@ const Explore = () => {
     }
   }, [params.filter, params.query]);
 
-  // Refetch notifications when screen comes into focus - with proper cleanup
-  useFocusEffect(
-    useCallback(() => {
-      if (!user?.$id) return;
-
-      let isActive = true;
-
-      const fetchNotifications = async () => {
-        try {
-          if (isActive) {
-            await refreshNotifications({ userId: user.$id });
-          }
-        } catch (error) {
-          console.error("Failed to refresh notifications:", error);
-        }
-      };
-
-      fetchNotifications();
-
-      return () => {
-        isActive = false;
-      };
-    }, [user?.$id]) // Only depend on user?.$id, not refreshNotifications
-  );
-
-  const handleCardPress = () => {};
+  const handleCardPress = (id: string) => router.push(`/properties/${id}`);
 
   return (
     <SafeAreaView className="h-full bg-white">
@@ -101,7 +64,7 @@ const Explore = () => {
         data={properties}
         numColumns={2}
         renderItem={({ item }) => (
-          <Card item={item} onPress={handleCardPress} />
+          <Card item={item} onPress={() => handleCardPress(item.$id)} />
         )}
         keyExtractor={(item) => item.$id}
         contentContainerClassName="pb-32"
@@ -129,18 +92,8 @@ const Explore = () => {
                   Explore
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => router.push("/notifications")}
-                className="relative"
-              >
+              <TouchableOpacity onPress={() => {}} className="relative">
                 <Image source={icons.bell} className="w-6 h-6" />
-                {unreadCount > 0 && (
-                  <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 items-center justify-center">
-                    <Text className="text-white text-xs font-rubik-bold">
-                      {unreadCount}
-                    </Text>
-                  </View>
-                )}
               </TouchableOpacity>
             </View>
 
