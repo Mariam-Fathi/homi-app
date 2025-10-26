@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useEffect, useCallback, useState, useRef } from "react";
-import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import icons from "@/constants/icons";
@@ -19,11 +19,7 @@ import NoResults from "@/components/NoResult";
 import { Card, FeaturedCard } from "@/components/Cards";
 
 import { useAppwrite } from "@/lib/useAppwrite";
-import {
-  getLatestProperties,
-  getNotifications,
-  getProperties,
-} from "@/lib/appwrite";
+import { getLatestProperties, getProperties } from "@/lib/appwrite";
 import { useAuthStore } from "@/store/authStore";
 
 const Home = () => {
@@ -52,18 +48,6 @@ const Home = () => {
     skip: true,
   });
 
-  const {
-    data: notifications,
-    refetch: refreshNotifications,
-    loading: notificationsLoading,
-  } = useAppwrite({
-    fn: getNotifications,
-    params: { userId: user?.$id || "" },
-    skip: !user?.$id,
-  });
-
-  const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0;
-
   // Use ref to track if component is mounted to prevent infinite loops
   useEffect(() => {
     isMountedRef.current = true;
@@ -83,47 +67,10 @@ const Home = () => {
     }
   }, [params.filter, params.query]);
 
-  // Create a stable callback for refreshing notifications
-  const handleRefreshNotifications = useCallback(async () => {
-    if (user?.$id) {
-      await refreshNotifications({ userId: user.$id });
-    }
-  }, [user?.$id, refreshNotifications]);
-
-  // Refetch notifications when screen comes into focus - with proper cleanup
-  useFocusEffect(
-    useCallback(() => {
-      if (!user?.$id) return;
-
-      let isActive = true;
-
-      const fetchNotifications = async () => {
-        try {
-          if (isActive) {
-            await refreshNotifications({ userId: user.$id });
-          }
-        } catch (error) {
-          console.error("Failed to refresh notifications:", error);
-        }
-      };
-
-      fetchNotifications();
-
-      return () => {
-        isActive = false;
-      };
-    }, [user?.$id]) // Only depend on user?.$id, not refreshNotifications
-  );
-
   // Pull to refresh handler
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      // Refresh notifications with proper parameters
-      if (user?.$id) {
-        await refreshNotifications({ userId: user.$id });
-      }
-      
       // Refresh properties with current parameters
       await refetch({
         filter: params.filter!,
@@ -135,7 +82,7 @@ const Home = () => {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshNotifications, refetch, params.filter, params.query, user?.$id]);
+  }, [refetch, params.filter, params.query]);
 
   const handleCardPress = (id: string) => router.push(`/properties/${id}`);
 
@@ -180,18 +127,8 @@ const Home = () => {
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity
-                onPress={() => router.push("/notifications")}
-                className="relative"
-              >
+              <TouchableOpacity onPress={() => {}} className="relative">
                 <Image source={icons.bell} className="w-6 h-6" />
-                {unreadCount > 0 && (
-                  <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 items-center justify-center">
-                    <Text className="text-white text-xs font-rubik-bold">
-                      {unreadCount}
-                    </Text>
-                  </View>
-                )}
               </TouchableOpacity>
             </View>
 
